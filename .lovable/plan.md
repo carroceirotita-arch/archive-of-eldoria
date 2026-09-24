@@ -1,114 +1,137 @@
-# Survey Corps Archive — Planning
+# Arquivo Militar — Planning (revised)
 
-A private, in-universe military archive for a narrative AoT-inspired RPG. No dice, no HP, no combat math. Secrecy is enforced in the database, not in the interface.
+A private, in-universe military archive for a narrative AoT-inspired RPG. Interface entirely in Brazilian Portuguese (pt-BR). No dice, HP, damage, percentages or numerical power scaling. Secrecy is enforced on the server and in the database, not in the interface.
 
 ## 1. Architecture
 
-- TanStack Start (React + SSR) with file-based routes; Tailwind design tokens for the archive look.
-- Lovable Cloud (Postgres + Auth + Storage) for accounts, data, and file uploads (portraits, map scans).
-- Every read of sensitive data goes through server functions that act as the signed-in user; row-level security decides what comes back. The browser never receives rows it may not see.
-- Modular by section: characters, lore, skills, forum, admin — each with its own tables, server functions, and route folder, so a later phase never rewrites an earlier one.
+- TanStack Start (React + SSR), file-based routes, Tailwind design tokens.
+- Lovable Cloud (database, auth, file storage for portraits/facecards and maps).
+- Sensitive reads go through server functions acting as the signed-in user; row-level security decides what returns. The browser never receives rows or columns it may not see.
+- Modular by section (dossiês, NPCs, arquivo, habilidades, fórum, confidencial, administração): each owns its tables, server functions and route folder.
+- All UI text in pt-BR, kept in one strings module so wording stays consistent; dates formatted pt-BR.
+- Desktop and mobile are both first-class (see section 9).
 
-## 2. Pages
+## 2. Branches and identities
 
-Public (no login): a single gate page — archive cover with a seal and a sign-in panel.
+Playable branches: Divisão de Reconhecimento and Polícia Militar. Guarnição exists only as narrative content (lore/NPCs), never selectable for player characters.
 
-Behind login:
-- `/dossiers` — character index (cards as filed folders), `/dossiers/$id` with tabs: Identity, Biography, Skills, Equipment, Affiliations, Development, Classified.
-- `/archive` — world/lore, nested entries (regions, history, factions, titans), search.
-- `/skills` — skill compendium with categories and filters.
-- `/skills/tree` — skill tree per character/discipline; nodes and connecting lines on parchment, states: known / available / rumored / locked.
-- `/forum` — boards → threads → posts, in-character and out-of-character boards.
-- `/classified` — entries the current user is cleared for (their own secrets, faction files).
-- `/command` (GM/Admin only) — user and clearance management, secret authoring, faction membership, content moderation.
+Three visual identities, same institution:
+- Arquivo Central (neutral) — login, lore, forum OOC, shared areas.
+- Divisão de Reconhecimento — applied to Reconhecimento dossiers and branch areas.
+- Polícia Militar — applied to PM dossiers and branch areas.
 
-## 3. Authentication
+## 3. Pages (pt-BR routes)
 
-Email + password, invitation-driven (GM creates accounts or approves requests). No public signup. Session-gated route group; login redirects to the dossier index.
+Public: `/` — archive cover with seal and sign-in.
 
-## 4. Permissions
+Signed in:
+- `/meu-dossie` — the player's own single character, full view of what they are cleared for.
+- `/soldados` — roster of player characters: only name, age, facecard and branch.
+- `/soldados/$id` — same four fields for other players; full dossier only for owner, GM, admin.
+- `/figuras` — NPCs and Figuras Icônicas, separate from player characters, per-entry visibility.
+- `/arquivo` — world/lore, nested entries.
+- `/habilidades` and `/habilidades/arvore` — skill compendium and tree.
+- `/forum/ic` and `/forum/ooc` — separate In Character and Out of Character areas.
+- `/confidencial` — secret entries the user is cleared for.
+- `/comando` (GM/Admin) — visual admin center: dossiers, NPCs, skills, lore, groups, users, approvals queue.
 
-Roles in a separate `user_roles` table (never on the profile): `player`, `gm`, `admin`. Checked server-side through a security-definer function.
+## 4. Authentication
 
-Four access layers, combined:
-1. Role — GM/admin see everything.
-2. Ownership — a player always sees their own character's private fields.
-3. Faction/group membership — `groups` + `group_members` (Marley, Ackermann, secret orders...).
-4. Explicit grant — GM can grant a single user access to a single entry.
+Email + password. No open self-approval: new accounts start as pending and an administrator activates them and links them to their character. Session-gated route group.
 
-Every protected record carries a visibility level (`public`, `owner`, `group`, `granted`, `gm_only`). Row-level policies evaluate it; a direct URL or API call by an uncleared user returns nothing.
+## 5. Permissions
 
-## 5. Data model (outline)
+Platform roles (separate `user_roles` table, never on profiles): Jogador, Mestre, Administrador. Checked server-side via a security-definer function.
 
-- `profiles` — display name, avatar, rank flavor text.
+Secret narrative memberships are a separate system: `secret_groups` (Marley, Reiss, Ackermann, others) + `secret_group_members`. Membership grants reading access to group material only; it never grants platform powers.
+
+Access layers combined per record: role (Mestre/Admin), ownership (own character), secret-group membership, explicit per-user grant. Visibility levels: `publico`, `dono`, `grupo`, `concedido`, `mestre`.
+
+Hard guarantees:
+- Players cannot insert/update roles, memberships, grants, account status or approval state — no write policies for them on those tables.
+- Branch, official dossier fields and publication status are writable only by admins.
+- Direct URLs and API calls return nothing unauthorized, since filtering happens in the database.
+- Public roster served from a restricted view/function exposing only name, age, facecard, branch.
+
+## 6. Data model (outline)
+
+- `profiles` — display name, account status (pendente/ativo/suspenso).
 - `user_roles` — user + role.
-- `groups`, `group_members` — factions/bloodlines/organizations; groups themselves can be secret.
-- `characters` — owner, name, public summary, portrait, status.
-- `character_fields` — flexible field blocks (label, body, order, visibility, owning group) so the GM decides per-field what is public, private, or classified.
-- `skills` — name, category, description, requirements, narrative effects, restrictions, visibility.
-- `character_skills` — link + state (known/in progress) + GM notes.
-- `skill_tree_nodes`, `skill_tree_edges` — position and prerequisites, no points or numbers.
-- `lore_entries` — nested lore with visibility.
-- `forum_boards`, `threads`, `posts` — boards can be group-restricted.
-- `access_grants` — user + target record, for one-off clearances.
-- `audit_log` — who opened which classified record.
+- `secret_groups`, `secret_group_members`.
+- `characters` — one per player (unique owner), name, age, branch (reconhecimento | policia_militar), facecard, status.
+- `character_fields` — flexible blocks (label, body, order, visibility, group) for biography, equipment, affiliations, development, secrets.
+- `npcs` — NPCs and Figuras Icônicas (type, branch incl. Guarnição, fields with visibility).
+- `skills`, `character_skills`, `skill_tree_nodes`, `skill_tree_edges` — descriptive only: requirements, narrative effects, restrictions, visibility.
+- `lore_entries` — nested, with visibility.
+- `forum_boards` (area: ic | ooc, optional group restriction), `threads`, `posts`.
+- `submissions` — any future player-proposed content: status pendente/aprovado/rejeitado; only admins approve and publish into official tables.
+- `access_grants`, `audit_log`.
 
-No stat, HP, damage, or roll columns anywhere.
+No stat, HP, damage, percentage or roll columns anywhere.
 
-## 6. Public vs confidential
+## 7. Public vs confidential
 
-Two separate read paths per entity: a public fetcher (safe columns only) and a cleared fetcher. Lists never join secret fields "just in case". Classified blocks render only after a server response actually contains them.
+Separate fetchers per entity: public (safe columns) and cleared. Lists and search never include secret fields. Classified blocks render only when the server response contains them; otherwise a redacted placeholder shows without the real text.
 
-## 7. Reusable components
+## 8. Admin interface (no code needed)
 
-DocumentSheet (paper panel with torn/aged edges), DossierFolder (index card), StampBadge (APPROVED / CLASSIFIED / DECEASED), WaxSeal (reveal trigger for secrets), RedactedBlock (blacked-out bar for content you lack clearance for), TypewriterHeading, ArchiveTabs (folder tabs), LedgerTable, InkDivider, FieldEntry (label + handwritten value), ThreadLetter (forum post as a letter), SkillNode, ClearanceGate.
+Visual forms inside the archive style: create/edit dossiers field by field, set each field's visibility with a selector, upload facecards, manage NPCs, skills and tree connections (drag nodes), lore, groups and memberships, activate users, assign roles, review the approvals queue. Every action validated server-side as admin.
 
-## 8. Visual system
+## 9. Visual system
 
-Dark archive room background (near-black brown) with warm parchment panels lit like a desk lamp. Ink black, faded sepia, oxidized military green, dried-blood red for classified marks, brass for seals. Paper grain, coffee rings, fold creases, faint ruled lines. Square or barely-softened corners, hairline ink rules and double borders instead of shadows and cards. No gradients, no glass, no rounded floating cards, no top SaaS navbar — navigation is a filing-cabinet rail with tabbed dividers. All colors as tokens in the stylesheet.
+Shared base: dark archive room, aged parchment documents, ink rules, double borders, seals, stamps, dossiers, paper grain, fold creases, square corners. No SaaS navbars, gradients, glass or floating rounded cards.
 
-## 9. Typography
+Department variations (same structure, different institutional details):
+- Arquivo Central — neutral sepia paper, black ink, brass seal, general registry stamps.
+- Reconhecimento — field-worn paper, oxidized green ink accents, Asas da Liberdade seal, expedition report forms, map-grid underlays.
+- Polícia Militar — crisp official stationery, deep ink and royal-seal red wax, unicorn crest, bureaucratic form layouts, stricter ruled grids.
 
-Headings in an old-style display serif (e.g. Cormorant / IM Fell style), body in a highly readable transitional serif at generous size and line height, labels and stamps in a condensed uppercase letter-spaced face, occasional handwritten script for GM annotations and signatures only. Never script for body text.
+Each identity is a token set (paper, ink, accent, seal, stamp artwork, form template) applied by context, so they read as departments, not color swaps.
 
-## 10. Animation
+Mobile: dossier as a stacked file you swipe through tab by tab, bottom filing-tab bar for navigation, full-width document sheets, seals and stamps scaled for touch, forum as a letter thread. Desktop: filing-cabinet side rail, open dossier spread across two pages.
 
-Motion for React, subtle and physical: dossier folder opens on entering a character, pages slide and settle when switching tabs, ink fades in on headings, a stamp thuds onto classified panels, wax seal cracks when a secret is unsealed, redacted bars wipe away when clearance is confirmed, lore entries unfold like a letter. Slow easing, no bounce, respects reduced-motion.
+## 10. Typography
 
-## 11. Implementation order
+Old-style display serif for headings, highly readable serif for body, condensed uppercase face for labels and stamps, handwritten script only for signatures and GM notes. All fonts with full Portuguese accent support.
 
-1. Foundation + visual identity: tokens, fonts, textures, core document components, one static demo dossier.
-2. Navigation shell and route skeleton with placeholder pages.
-3. Cloud backend + authentication + profiles + roles + login gate.
-4. Characters: sheets with public/private fields, owner and GM editing.
-5. Groups/factions and the full visibility system, including redacted and grant flows.
-6. Skills compendium, then the skill tree view.
-7. Lore archive.
-8. Forum.
-9. Classified hub + audit log + GM command center.
-10. Animation polish, search, mobile refinement.
+## 11. Animation
 
-## 12. Cost control and avoiding rework
+Subtle and physical: dossier opens, pages slide and settle between tabs, ink fades in on headings, stamps land on classified panels, wax seals crack on reveal, redacted bars wipe away after clearance, lore unfolds like a letter, department switch like a new folder placed on the desk. Touch-friendly swipe transitions on mobile. Slow easing, no bounce, respects reduced-motion.
 
-Lock the design tokens and document components in phase 1 and reuse them everywhere. Decide the visibility model once (phase 3) and apply the same pattern to every table afterwards. Keep each phase to one section so a change never touches the rest. Seed a few real characters early to test layouts against real text.
+## 12. Implementation order
 
-## 13. Risks
+1. Foundation: pt-BR strings, base archive tokens, fonts, textures, core document components, responsive shell (desktop rail + mobile tab bar).
+2. The three department identities as token sets on a static demo dossier.
+3. Cloud backend, auth, profiles, roles, account activation.
+4. Characters: one per player, restricted roster view, own dossier.
+5. Admin visual editor for dossiers and users.
+6. Secret groups, visibility system, grants, confidential area.
+7. NPCs and Figuras Icônicas.
+8. Skills compendium, then skill tree.
+9. Lore archive.
+10. Forum IC/OOC.
+11. Submissions + approval queue (if adopted), audit log.
+12. Animation polish, search, mobile refinement pass.
 
-- Visibility rules spread inconsistently across tables — mitigated by one shared policy pattern and helper function.
-- Leaking secrets through list endpoints or search — mitigated by separate fetchers and explicit column lists.
-- Heavy textures hurting readability or mobile performance — keep textures as light repeating overlays.
-- Skill tree layout complexity — start with a curated manual layout, not an auto-graph engine.
-- Flexible character fields becoming chaotic — GM-defined templates per character type.
+## 13. Cost control
 
-## 14. Decisions needed before building
+Lock tokens, strings module and document components early. Define the visibility pattern once and reuse it for every table. One section per phase. Seed real sample content early.
 
-- Interface language: Portuguese, English, or both?
-- Who creates characters: players (GM approves) or GM only?
-- Forum: in-character roleplay scenes, out-of-character chatter, or both?
-- Does each player have one character or several?
-- Should players see other players' public sheets, or only their own plus GM-published ones?
+## 14. Risks
 
-## 15. First vs later
+- Inconsistent visibility rules — one shared policy helper.
+- Leaks via roster, lists or search — restricted view and explicit columns.
+- Identities drifting into color swaps — shared component structure, differing only in institutional artifacts.
+- Textures hurting mobile performance/readability — light overlays.
+- Skill tree on small screens — mobile shows a vertical path view instead of the full graph.
 
-First: visual identity, navigation, auth, character sheets, visibility model.
-Later: skill tree visualization, forum, audit log, search, notifications, timeline of sessions, image uploads at scale.
+## 15. Decisions before building
+
+- Do players edit anything on their dossier (e.g. development notes) as submissions, or is everything admin-only?
+- Can IC forum boards be restricted by branch or secret group?
+- Account onboarding: admin creates accounts, or players register and wait for activation?
+
+## 16. First vs later
+
+First: foundation, identities, auth, roles, characters, admin editor, visibility.
+Later: skill tree, forum, submissions, audit log, search, notifications, session timeline.
