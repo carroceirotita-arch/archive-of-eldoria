@@ -169,7 +169,15 @@ O painel será uma “sala de comando” do Arquivo Central, com formulários cl
 
 - **Arquivar** será a remoção normal e reversível.
 - **Restaurar** devolverá o conteúdo ao estado ativo.
-- **Excluir permanentemente** será uma ação separada, exigirá confirmação explícita e será registrada no histórico de auditoria.
+- **Excluir permanentemente** será uma ação separada, exigirá confirmação explícita e deliberada — preferencialmente digitando o nome do registro — e será registrada no histórico de auditoria.
+
+### Pré-visualizar como usuário
+
+- O Administrador poderá visualizar um dossiê ou registro confidencial pela perspectiva de um jogador específico ou de um contexto controlado: membro da Divisão de Reconhecimento, membro da Polícia Militar, membro de um grupo secreto ou jogador comum.
+- A pré-visualização será somente visual e de diagnóstico; não permitirá editar como o usuário, assumir sua sessão nem contornar permissões.
+- Ela executará a mesma função central de autorização e os mesmos caminhos de consulta usados pelo usuário real. Campos sem autorização não serão enviados pelo servidor à pré-visualização.
+- O modo exibirá claramente qual pessoa ou contexto está sendo simulado e oferecerá uma saída imediata para retornar à visão administrativa.
+- Testes automatizados compararão a resposta da pré-visualização com a resposta autorizada do contexto selecionado, evitando divergências futuras.
 
 Somente implantação, backups, migrações e segredos de infraestrutura exigirão acesso técnico.
 
