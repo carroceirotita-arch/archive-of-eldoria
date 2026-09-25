@@ -12,3 +12,5 @@
 - [ ] Fórum IC/OOC
 - [ ] Auditoria, busca e exclusão controlada
 - [ ] Polimento e implantação externa
+
+- [ ] Verificar e corrigir o estado atual antes de continuar
