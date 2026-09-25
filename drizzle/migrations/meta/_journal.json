@@ -15,6 +15,13 @@
       "when": 1790294527804,
       "tag": "0001_restringir_funcoes_de_autorizacao",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790294562280,
+      "tag": "0002_bloquear_contas_inativas_e_proteger_diretorio",
+      "breakpoints": true
     }
   ]
 }

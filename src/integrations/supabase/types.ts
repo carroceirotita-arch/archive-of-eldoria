@@ -734,6 +734,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_account: { Args: { _user_id: string }; Returns: boolean }
       is_secret_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
